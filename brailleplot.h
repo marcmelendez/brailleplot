@@ -5,6 +5,9 @@
 # include <locale.h>
 # include <wchar.h>
 # include <math.h>
+# include <termios.h>
+# include <unistd.h>
+# include <fcntl.h>
 
 /* Brailleplot mode (black and white, or different colour schemes) */
 typedef enum {DEFAULT=0, C16, C256, CTRUE} brailleplot_mode;
@@ -359,4 +362,33 @@ void brailleplot_close(brailleplot_canvas * canvas) {
 
   return;
 }
+
+/* Key press function */
+int kbhit(void)
+{
+  struct termios oldt, newt;
+  int ch;
+  int oldf;
+
+  tcgetattr(STDIN_FILENO, &oldt);
+  newt = oldt;
+  newt.c_lflag &= ~(ICANON | ECHO);
+  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+  oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+  fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+
+  ch = getchar();
+
+  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+  fcntl(STDIN_FILENO, F_SETFL, oldf);
+
+  if(ch != EOF)
+  {
+    ungetc(ch, stdin);
+    return 1;
+  }
+
+  return 0;
+}
+
 # endif

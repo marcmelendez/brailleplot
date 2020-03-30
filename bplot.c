@@ -4,6 +4,8 @@
 # include <math.h>
 # include "brailleplot.h"
 
+# define VERSION "0.1" /* Program version */
+
 /* Default brailleplot canvas width and height */
 # define WIDTH 80
 # define HEIGHT 25
@@ -24,14 +26,34 @@ int main(int argc, char * argv[])
   double xrange = 0, yrange = 0; /* Width and height of plot */
 
   char buffer[250]; /* Text buffer to store data read from file */
-  double x, x2, xmin = 0, xmax, y, y2, ymin = 0, ymax; /* Data coordinates and maximum and minimum coordinates */
+  double x, x2, xmin = 0, xmax = 0, y, y2, ymin = 0, ymax = 0; /* Data coordinates and maximum and minimum coordinates */
   int nread = 0; /* Number of items read */
+  char keypress;
 
   int px, py, px2, py2; /* Pixel coordinates */
   int colour = DEFAULT_FOREGROUND_COLOUR; /* Current foreground colour */
 
   /* Read command line arguments */
   if(argc < 2 && isatty(0)) { /* Use help message */
+    printf("--- bplot (version " VERSION ") ---\n");
+    printf("Display plot data in ASCII files.\n"
+           "Data should be formatted by rows:\n"
+           " <n>                 Single integer RGB value (colour)\n"
+           " <x> <y>             Pixel coordinates.\n"
+           " <x> <y> <R>         Circle centre coordinates and radius.\n"
+           " <x1> <y1> <x2> <y2> Line from (x1, y1) to (x2, y2).\n"
+           "                     Empty rows separate frames.\n\n");
+    printf("Usage: %s [options] <Data file>\n", argv[0]);
+    printf("Options:\n"
+           "  -x <xmin> <xmax>   Minimum and maximum x coordinate values.\n"
+           "  -y <ymin> <ymax>   Minimum and maximum y coordinate values.\n"
+           "  -w <width>         Canvas width.\n"
+           "  -h <height>        Canvas height.\n");
+    printf("Interaction keys:\n"
+           "  +, -             Zoom in, out.\n"
+           "  w, s             Up, down.\n"
+           "  a, d             Left, right.\n"
+           "  q                Quit program.\n");
     return 0;
   }
   else {
@@ -129,8 +151,8 @@ int main(int argc, char * argv[])
         brailleplot_setcolour(&canvas, canvasheight - py/4 - 1, px/2, 0, colour);
       }
       else if(nread == 3) { /* Draw circle */
-        brailleplot_circle(&canvas, px, py, (int) round(2*(x2 - xmin)*(canvaswidth - 1)/xrange) + 1, 1);
-        brailleplot_ccircle(&canvas, px, py, (int) round(2*(x2 - xmin)*(canvaswidth - 1)/xrange) + 1, 0, colour);
+        brailleplot_circle(&canvas, px, py, (int) round(2*x2*(canvaswidth - 1)/xrange) + 1, 1);
+        brailleplot_ccircle(&canvas, px, py, (int) round(2*x2*(canvaswidth - 1)/xrange) + 1, 0, colour);
       }
       else if(nread == 4) { /* Draw line */
         px2 = (int) round(2*(x2 - xmin)*(canvaswidth - 1)/xrange) + 1;
@@ -144,16 +166,59 @@ int main(int argc, char * argv[])
       usleep(5000); /* Sleep briefly */
       brailleplot_cls(&canvas); /* Clear canvas */
     }
+
+    /* Interactive commands */
+    if(kbhit()) {
+      keypress = getchar();
+      switch(keypress) {
+        case 'w':
+        case 'W': /* Move up */
+          ymax += yrange/10;
+          ymin += yrange/10;
+          break;
+        case 's':
+        case 'S': /* Move down */
+          ymax -= yrange/10;
+          ymin -= yrange/10;
+          break;
+        case 'a':
+        case 'A': /* Move left */
+          xmax -= xrange/10;
+          xmin -= xrange/10;
+          break;
+        case 'd':
+        case 'D': /* Move right */
+          xmax += xrange/10;
+          xmin += xrange/10;
+          break;
+        case '+': /* Zoom in */
+          xrange *= 0.9; yrange *= 0.9;
+          xmin = 0.5*(xmax + xmin - xrange);
+          xmax = xmin + xrange;
+          ymin = 0.5*(ymax + ymin - yrange);
+          ymax = ymin + yrange;
+          break;
+        case '-': /* Zoom out */
+          xrange /= 0.9; yrange /= 0.9;
+          xmin = 0.5*(xmax + xmin - xrange);
+          xmax = xmin + xrange;
+          ymin = 0.5*(ymax + ymin - yrange);
+          ymax = ymin + yrange;
+          break;
+        case 'q':  /* Exit program */
+        case 'Q':
+
+          /* Flush to screen */
+          brailleplot_refresh(&canvas);
+
+          /* Clean up */
+          brailleplot_close(&canvas);
+          fclose(plotdata);
+
+          return 0;
+      }
+    }
   }
-
-  /* Flush to screen */
-  brailleplot_refresh(&canvas);
-
-  /* Clean up */
-  brailleplot_close(&canvas);
-  fclose(plotdata);
-
-  return 0;
 }
 
 /* Draw coloured line */
@@ -181,7 +246,7 @@ void brailleplot_cline(brailleplot_canvas * canvas, int x1, int y1, int x2, int 
   return;
 }
 
-/* Draw coloured circle (UNFINISHED) */
+/* Draw coloured circle */
 void brailleplot_ccircle(brailleplot_canvas * canvas, int x, int y, int radius, int bgcolour, int fgcolour) {
   float p = 1.25 - radius; /* Decision parameter */
   int Dx = 0, Dy = radius; /* Coordinates relative to (x, y) */
