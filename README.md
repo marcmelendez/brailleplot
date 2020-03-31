@@ -34,7 +34,7 @@ terminal, you should get the following outputs.
 
 ![16 colours test screen](examples/colour_test_C16.png)
 
-### colour_test_C56
+### colour_test_C256
 
 ![256 colours test screen](examples/colour_test_C256.png)
 
