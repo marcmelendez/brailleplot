@@ -1,7 +1,8 @@
 ![Brailleplot](Brailleplot.png)
 
 A simple colour graphics library for the Linux terminal using Braille dots as
-pixels written in C.
+pixels written in C. If you wish to play with it, remember to choose a terminal
+font that supports Braille characters.
 
 ## How it works
 
