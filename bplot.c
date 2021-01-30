@@ -163,6 +163,7 @@ int main(int argc, char * argv[])
     }
     else { /* Otherwise, draw the frame */
       brailleplot_refresh(&canvas); /* Flush to screen */
+      fflush(stdout);
       usleep(5000); /* Sleep briefly */
       brailleplot_cls(&canvas); /* Clear canvas */
     }
